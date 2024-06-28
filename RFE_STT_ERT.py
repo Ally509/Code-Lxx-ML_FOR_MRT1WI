@@ -20,48 +20,48 @@ from sklearn.metrics import accuracy_score, roc_auc_score
 
 def run(seed, X1, y1):
 
+    
+    # Datas Splitting1
+    x_train, x_test, y_train, y_test = train_test_split(X1, y1, test_size=0.2, random_state=seed)
+
     # Standardized processing
     ss = StandardScaler()
-    X_sm_std = ss.fit_transform(X1)
+    x_train=ss.fit_transform(x_train)
+    x_test=transfer.transform(x_test)
 
     clf = ExtraTreesClassifier(random_state=42)
     rfe = RFE(clf, n_features_to_select=50, step=10)
-    X_rfe = rfe.fit_transform(X_sm_std, y1)
+    x_train_rfe = rfe.fit_transform(x_train, y_train)
+    x_test_rfe = rfe.transform(x_test)
 
 
-
-    # Datas Splitting1 - split the data set first and then resampling
-    x_train, x_test, y_train, y_test = train_test_split(X_rfe, y1, test_size=0.2, random_state=seed)
-
+   # Resampling
     resampling = SMOTETomek(random_state=55)
-    x_train, y_train = resampling.fit_resample(x_train, y_train)
+    x_train_resampled, y_train_resampled = resampling.fit_resample(x_train_rfe, y_train)
 
     # Classifier
     clf = ExtraTreesClassifier(random_state=42)
-    clf.fit(x_train, y_train)
-    y_pred = clf.predict(x_test)
-    y_prob = clf.predict_proba(x_test)[:, 1]
+    clf.fit(x_train_resampled, y_train_resampled)
+    y_pred = clf.predict(x_test_rfe)
+    y_prob = clf.predict_proba(x_test_rfe)[:, 1]
 
+    # Metrics
     clf_test_score = accuracy_score(y_test, y_pred)
     M = confusion_matrix(y_test, y_pred)
 
     print("Accuracy: {}".format(clf_test_score))
     print("AUC: {}".format(roc_auc_score(y_test, y_prob)))
-    print("Sensitivity:",metrics.recall_score(y_test, y_pred))
-    print("Specificity：{}".format(M[0][0] / (M[0][0] + M[0][1])))
+    print("Sensitivity:", metrics.recall_score(y_test, y_pred))
+    print("Specificity: {}".format(M[0][0] / (M[0][0] + M[0][1])))
     Gmean = geometric_mean_score(y_test, y_pred)
-    print("G-mean：",Gmean)
-
-
+    print("G-mean:", Gmean)
 
 if __name__ == '__main__':
-
     seed = [13, 57, 69, 258, 666, 1314, 1999, 2018, 2687, 54632]
-    all_time = []
 
     for i in range(len(seed)):
-        print("random_seed：{}".format(seed[i]))
-        fff_start = time.time()
+        print("Random Seed:", seed[i])
+        start_time = time.time()
 
         df = pd.read_excel("data.xlsx")
         X = df.drop(labels=['ID', 'SOURCE', 'FNCLCC grade'], axis=1).fillna(0)
@@ -69,18 +69,14 @@ if __name__ == '__main__':
         X1 = np.array(X)
         y1 = np.array(y)
 
-        fff_end = time.time()
-        frist_time = fff_end - fff_start
-        print("Data processing time：{}".format(frist_time))
+        end_time = time.time()
+        data_processing_time = end_time - start_time
+        print("Data Processing Time:", data_processing_time)
 
         start_time = time.time()
         run(seed[i], X1, y1)
         end_time = time.time()
-
-        second_time = end_time-start_time
-        print("Running time：{}".format(second_time))
-        print("Total time：{}".format(frist_time+second_time))
+        running_time = end_time - start_time
+        print("Running Time:", running_time)
+        print("Total Time:", data_processing_time + running_time)
         print("--------------------------------")
-        all_time.append(frist_time+second_time)
-
-
